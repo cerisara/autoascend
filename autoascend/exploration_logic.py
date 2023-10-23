@@ -2,13 +2,16 @@ import re
 
 import cv2
 import numpy as np
+
 from nle import nethack as nh
 from nle.nethack import actions as A
 
 from . import utils
 from .character import Character
 from .exceptions import AgentPanic
-from .glyph import G, C, SS
+from .glyph import C
+from .glyph import G
+from .glyph import SS
 from .level import Level
 from .strategy import Strategy
 

@@ -1,29 +1,41 @@
 import contextlib
 import re
-from collections import namedtuple, Counter, defaultdict
+
+from collections import Counter
+from collections import defaultdict
+from collections import namedtuple
 from functools import partial
 
 import nle.nethack as nh
 import nltk
 import numpy as np
+
 from nle.nethack import actions as A
 
 from . import combat
 from . import utils
 from .character import Character
-from .exceptions import AgentPanic, AgentFinished, AgentChangeStrategy
+from .exceptions import AgentChangeStrategy
+from .exceptions import AgentFinished
+from .exceptions import AgentPanic
 from .exploration_logic import ExplorationLogic
 from .global_logic import GlobalLogic
-from .glyph import MON, C, Hunger, G, SHOP
-from .item import Item, flatten_items
+from .glyph import C
+from .glyph import G
+from .glyph import Hunger
+from .glyph import MON
+from .glyph import SHOP
+from .item import Item
+from .item import flatten_items
 from .item.inventory import Inventory
 from .level import Level
-from .monster_tracker import MonsterTracker, disappearance_mask
+from .monster_tracker import MonsterTracker
+from .monster_tracker import disappearance_mask
 from .stats_logger import StatsLogger
 from .strategy import Strategy
 
 BLStats = namedtuple('BLStats',
-                     'x y strength_percentage strength dexterity constitution intelligence wisdom charisma score hitpoints max_hitpoints depth gold energy max_energy armor_class monster_level experience_level experience_points time hunger_state carrying_capacity dungeon_number level_number prop_mask')
+                     'x y strength_percentage strength dexterity constitution intelligence wisdom charisma score hitpoints max_hitpoints depth gold energy max_energy armor_class monster_level experience_level experience_points time hunger_state carrying_capacity dungeon_number level_number prop_mask alignment')
 
 
 class Agent:
@@ -85,6 +97,9 @@ class Agent:
         # combat.rl_scoring.init_fight2_model(self)
 
         self.stats_logger = StatsLogger()
+
+        # STRATEGY LOGGING
+        self.high_level_strategy_log = None
 
     @property
     def has_pet(self):
@@ -369,7 +384,7 @@ class Agent:
         if isinstance(action, str):
             assert len(action) == 1
             action = A.ACTIONS[A.ACTIONS.index(ord(action))]
-        observation, reward, done, info = self.env.step(action)
+        observation, reward, done, info = self.env.step(action, self.high_level_strategy_log)
         observation = {k: v.copy() for k, v in observation.items()}
         self.step_count += 1
         self.score += reward
@@ -1106,6 +1121,7 @@ class Agent:
     @utils.debug_log('fight2')
     @Strategy.wrap
     def fight2(self):
+        self.high_level_strategy_log = 'fight2'
         yielded = False
         wait_counter = 0
         while 1:
@@ -1242,6 +1258,7 @@ class Agent:
     def engulfed_fight(self):
         if not utils.any_in(self.glyphs, G.SWALLOW):
             yield False
+        self.high_level_strategy_log = 'engulfed_fight'
         yield True
         while True:
             mask = utils.isin(self.glyphs, G.SWALLOW)
@@ -1354,6 +1371,7 @@ class Agent:
 
         if (target_y, target_x) != (self.blstats.y, self.blstats.x):
             if not yielded:
+                self.high_level_strategy_log = 'eat_corpses_from_ground'
                 yielded = True
                 yield True
             self.go_to(target_y, target_x, debug_tiles_args=dict(color=(255, 255, 0), is_path=True))
@@ -1369,6 +1387,7 @@ class Agent:
                     if self._is_corpse_editable(monster_id, corpse_age):
                         if not yielded:
                             yielded = True
+                            self.high_level_strategy_log = 'eat_corpses_from_ground'
                             yield True
                         self.inventory.eat(item)
 
@@ -1427,6 +1446,7 @@ class Agent:
                 (self.blstats.hitpoints < 1 / 3 * self.blstats.max_hitpoints
                  or self.blstats.hitpoints < 8) and items
         ):
+            self.high_level_strategy_log = 'emergency'
             yield True
             self.inventory.quaff(items[0])
             return
@@ -1434,6 +1454,7 @@ class Agent:
         items = [item for item in flatten_items(self.inventory.items) if item.is_unambiguous() and
                  item.category == nh.POTION_CLASS and item.object.name in ['fruit juice']]
         if items and self.blstats.hunger_state >= Hunger.FAINTING:
+            self.high_level_strategy_log = 'emergency'
             yield True
             self.inventory.quaff(items[0])
             return
@@ -1444,6 +1465,7 @@ class Agent:
                   * self.blstats.max_hitpoints or self.blstats.hitpoints < 6))
                 or (self.is_safe_to_pray(400) and self.blstats.hunger_state >= Hunger.FAINTING)
         ):
+            self.high_level_strategy_log = 'emergency'
             yield True
             self.pray()
             return
@@ -1471,6 +1493,7 @@ class Agent:
                     (not item.is_corpse() or
                      item.monster_id in [MON.from_name(n) - nh.GLYPH_MON_OFF for n in ['lizard', 'lichen']]):
                 yield True
+                self.high_level_strategy_log = 'eat_from_inventory'
                 self.inventory.eat(item)
                 return
         yield False
@@ -1482,6 +1505,7 @@ class Agent:
             # spring of wolfsbane
             for item in flatten_items(self.inventory.items):
                 if item.objs[0].name == 'sprig of wolfsbane':
+                    self.high_level_strategy_log = 'cure_disease'
                     yield True
                     self.inventory.eat(item)
                     return
@@ -1489,12 +1513,14 @@ class Agent:
             # holy water
             for item in flatten_items(self.inventory.items):
                 if item.objs[0].name == 'water' and item.status == Item.BLESSED:
+                    self.high_level_strategy_log = 'cure_disease'
                     yield True
                     self.inventory.quaff(item)
                     return
 
             # pray
             if self.is_safe_to_pray():
+                self.high_level_strategy_log = 'cure_disease'
                 yield True
                 self.pray()
                 return

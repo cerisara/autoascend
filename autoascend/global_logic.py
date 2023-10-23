@@ -1,7 +1,9 @@
-from enum import IntEnum, auto
+from enum import IntEnum
+from enum import auto
 
 import nle.nethack as nh
 import numpy as np
+
 from nle.nethack import actions as A
 
 from . import objects as O
@@ -9,8 +11,11 @@ from . import soko_solver
 from . import utils
 from .character import Character
 from .exceptions import AgentPanic
-from .glyph import Hunger, G, MON
-from .item import Item, flatten_items
+from .glyph import G
+from .glyph import Hunger
+from .glyph import MON
+from .item import Item
+from .item import flatten_items
 from .item.item_priority_base import ItemPriorityBase
 from .level import Level
 from .strategy import Strategy
@@ -184,6 +189,7 @@ class GlobalLogic:
         # TODO: refactor
         if not utils.isin(self.agent.current_level().objects, G.TRAPS).any():
             yield False
+        self.agent.high_level_strategy_log = 'solve_sokoban'
         yield True
 
         def push_bolder(ty, tx, dy, dx):
@@ -324,6 +330,7 @@ class GlobalLogic:
                 self.agent.character.prop.hallu or
                 self.agent.character.prop.polymorph):
             if not yielded:
+                self.agent.high_level_strategy_log = 'wait_out_unexpected_state'
                 yield True
                 yielded = True
 
@@ -450,6 +457,7 @@ class GlobalLogic:
         if not any((self.can_sacrify(item) for item in flatten_items(self.agent.inventory.items))):
             yield False
 
+        self.agent.high_level_strategy_log = 'offer_corpses'
         yield True
 
         y, x = min(altars, key=lambda p: dis[p])
@@ -492,6 +500,7 @@ class GlobalLogic:
             yield False
 
         if any(item.category == nh.COIN_CLASS for item in flatten_items(self.agent.inventory.items)):
+            self.agent.high_level_strategy_log = 'follow_guard'
             yield True
             # if 'Please drop that gold and follow me.' in self.message:
             self.agent.stats_logger.log_event('drop_gold')
@@ -505,12 +514,14 @@ class GlobalLogic:
         if utils.adjacent((y, x), (self.agent.blstats.y, self.agent.blstats.x)):
             yield False
 
+        self.agent.high_level_strategy_log = 'follow_guard'
         yield True
 
         self.agent.go_to(y, x, stop_one_before=True)
 
     @Strategy.wrap
     def current_strategy(self):
+        self.agent.high_level_strategy_log = 'explore_gather_identify'
         yield True
         while 1:
             explore_stairs_condition = lambda: False
