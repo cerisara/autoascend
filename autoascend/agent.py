@@ -1121,7 +1121,7 @@ class Agent:
     @utils.debug_log('fight2')
     @Strategy.wrap
     def fight2(self):
-        self.high_level_strategy_log = 'fight2'
+        self.high_level_strategy_log = 'fight'
         yielded = False
         wait_counter = 0
         while 1:
@@ -1371,7 +1371,7 @@ class Agent:
 
         if (target_y, target_x) != (self.blstats.y, self.blstats.x):
             if not yielded:
-                self.high_level_strategy_log = 'eat_corpses_from_ground'
+                self.high_level_strategy_log = 'ground_eat'
                 yielded = True
                 yield True
             self.go_to(target_y, target_x, debug_tiles_args=dict(color=(255, 255, 0), is_path=True))
@@ -1387,7 +1387,7 @@ class Agent:
                     if self._is_corpse_editable(monster_id, corpse_age):
                         if not yielded:
                             yielded = True
-                            self.high_level_strategy_log = 'eat_corpses_from_ground'
+                            self.high_level_strategy_log = 'ground_eat'
                             yield True
                         self.inventory.eat(item)
 
@@ -1493,7 +1493,7 @@ class Agent:
                     (not item.is_corpse() or
                      item.monster_id in [MON.from_name(n) - nh.GLYPH_MON_OFF for n in ['lizard', 'lichen']]):
                 yield True
-                self.high_level_strategy_log = 'eat_from_inventory'
+                self.high_level_strategy_log = 'inventory_eat'
                 self.inventory.eat(item)
                 return
         yield False

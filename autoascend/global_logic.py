@@ -330,7 +330,7 @@ class GlobalLogic:
                 self.agent.character.prop.hallu or
                 self.agent.character.prop.polymorph):
             if not yielded:
-                self.agent.high_level_strategy_log = 'wait_out_unexpected_state'
+                self.agent.high_level_strategy_log = 'wait_out'
                 yield True
                 yielded = True
 
@@ -521,7 +521,7 @@ class GlobalLogic:
 
     @Strategy.wrap
     def current_strategy(self):
-        self.agent.high_level_strategy_log = 'explore_gather_identify'
+        self.agent.high_level_strategy_log = 'explore'
         yield True
         while 1:
             explore_stairs_condition = lambda: False
