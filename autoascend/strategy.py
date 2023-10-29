@@ -41,13 +41,17 @@ class Strategy:
     def run(self, return_condition=False):
         gen = self.strategy()
         if not next(gen):
+            # teste si on est arrive a la fin de la strategie ?
             if return_condition:
                 return False
             return None
         try:
+            # print("detson pass gen",gen.gi_code)
             next(gen)
+            # print("detson after gen")
             assert 0
         except StopIteration as e:
+            print("error",e)
             if return_condition:
                 return True
             return e.value
@@ -123,6 +127,7 @@ class Strategy:
     def preempt(self, agent, strategies, continue_after_preemption=True):
         """ Specify other strategies that may preempt the strategy """
         def f(self=self, agent=agent, strategies=strategies):
+            # print("detson toto",self)
             gen = self.strategy()
             condition_passed = False
             with agent.disallow_step_calling():

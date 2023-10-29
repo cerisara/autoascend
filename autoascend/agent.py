@@ -385,6 +385,7 @@ class Agent:
             assert len(action) == 1
             action = A.ACTIONS[A.ACTIONS.index(ord(action))]
         observation, reward, done, info = self.env.step(action, self.high_level_strategy_log)
+        print("detsonstep",action)
         observation = {k: v.copy() for k, v in observation.items()}
         self.step_count += 1
         self.score += reward
@@ -1530,6 +1531,9 @@ class Agent:
     ####### MAIN
 
     def handle_exception(self, exc):
+        print("detson exception",exc)
+        # import traceback
+        # traceback.print_exc()
         if isinstance(exc, (KeyboardInterrupt, AgentFinished, SystemExit)):
             raise exc
         if isinstance(exc, BaseException):
@@ -1547,6 +1551,7 @@ class Agent:
                 with self.atom_operation():
                     self.step(A.Command.ESC)
                     self.step(A.Command.ESC)
+                    # print("detson3")
 
                     self.current_level().stair_destination[self.blstats.y, self.blstats.x] = \
                         ((Level.PLANE, 1), (None, None))  # TODO: check level num
@@ -1557,14 +1562,17 @@ class Agent:
                     if 'Autopickup: ON' in self.message:
                         self.step(A.Command.AUTOPICKUP)
                     init_finished = True
+                    # print("detson4")
             except BaseException as e:
                 self.handle_exception(e)
 
             assert init_finished
 
             last_step = self.step_count
+            # print("detson5",last_step)
             inactivity_counter = 0
             while 1:
+                # print("detson6",self.step_count,inactivity_counter)
                 inactivity_counter += 1
                 if self.step_count != last_step:
                     inactivity_counter = 0
@@ -1585,6 +1593,7 @@ class Agent:
                     finally:
                         last_step = self.step_count
 
+                    # print("detson7",type(self.global_logic.global_strategy()))
                     self.global_logic.global_strategy().run()
                     assert 0
                 except BaseException as e:

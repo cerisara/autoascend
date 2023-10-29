@@ -420,6 +420,10 @@ class ExplorationLogic:
                     nonzero_y, nonzero_x = ((search_prio == search_prio[to_explore].max()) & to_explore).nonzero()
 
                 if not yielded:
+                    # detson bug: apres ce yield, il devrait continuer pour explorer effectivement, mais il ne continue jamais
+                    # import traceback
+                    # traceback.print_stack()
+
                     yielded = True
                     yield True
 
